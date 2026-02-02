@@ -24,41 +24,18 @@ local NPCCurrentLocations = {} -- Synced from server
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- FRAMEWORK DETECTION & INITIALIZATION
 -- ═══════════════════════════════════════════════════════════════════════════════
+-- Note: Framework is initialized globally in shared/framework.lua
+-- We just keep FrameworkType for backward compatibility with player loaded events
 
-local Framework = nil
 local FrameworkType = Config.Framework
 
 function InitializeFramework()
-    if FrameworkType == 'auto' then
-        -- Auto-detect framework
-        if GetResourceState('lxr-core') == 'started' then
-            FrameworkType = 'lxrcore'
-        elseif GetResourceState('rsg-core') == 'started' then
-            FrameworkType = 'rsg-core'
-        elseif GetResourceState('qbr-core') == 'started' then
-            FrameworkType = 'qbr-core'
-        elseif GetResourceState('qr-core') == 'started' then
-            FrameworkType = 'qr-core'
-        elseif GetResourceState('vorp_core') == 'started' then
-            FrameworkType = 'vorp'
-        elseif GetResourceState('redem_roleplay') == 'started' then
-            FrameworkType = 'redemrp'
-        else
-            FrameworkType = 'standalone'
-        end
-    end
+    -- Framework is already initialized in shared/framework.lua
+    -- Just sync the FrameworkType for compatibility
+    FrameworkType = Framework.Type
     
     if Config.EnableDebug then
-        print(('[🐺 Bounty Quests] Framework detected: %s'):format(FrameworkType))
-    end
-    
-    -- Initialize framework-specific functions
-    if FrameworkType == 'lxrcore' or FrameworkType == 'rsg-core' or FrameworkType == 'qbr-core' or FrameworkType == 'qr-core' then
-        Framework = exports[Config.FrameworkSettings[FrameworkType].resource]:GetCoreObject()
-    elseif FrameworkType == 'vorp' then
-        Framework = exports.vorp_core:GetCore()
-    elseif FrameworkType == 'redemrp' then
-        TriggerEvent('redem:getSharedObject', function(obj) Framework = obj end)
+        print(('[🐺 Bounty Quests] Using Framework: %s'):format(FrameworkType))
     end
 end
 
@@ -80,12 +57,11 @@ function ShowNotification(message, type)
     
     local notifType = Config.Notifications.Types[type] or Config.Notifications.Types.info
     
-    if FrameworkType == 'vorp' then
-        Framework.NotifyLeft('Bounty Quests', message, 'generic_textures', 'tick', Config.Notifications.Duration)
-    elseif FrameworkType == 'lxrcore' or FrameworkType == 'rsg-core' or FrameworkType == 'qbr-core' then
-        Framework.Functions.Notify(message, type, Config.Notifications.Duration)
+    -- Use the Framework.Notify method from shared/framework.lua
+    if Framework and Framework.Notify then
+        Framework.Notify(message, type, Config.Notifications.Duration)
     else
-        -- Native notification
+        -- Fallback to native notification if framework not ready
         local str = Citizen.InvokeNative(0xFA925AC00EB830B9, 10, "LITERAL_STRING", message, Citizen.ResultAsLong())
         Citizen.InvokeNative(0xE9990552DEC71600)
     end
