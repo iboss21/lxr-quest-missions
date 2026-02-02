@@ -542,6 +542,17 @@ Config.AnimalGuards = {
 }
 
 -- ████████████████████████████████████████████████████████████████████████████████
+-- ████████████████████ NPC DYNAMIC SPAWN SETTINGS ████████████████████████████████
+-- ████████████████████████████████████████████████████████████████████████████████
+
+Config.NPCDynamicSpawn = {
+    Enabled = true, -- Enable random NPC location changes
+    ChangeInterval = 30, -- Time in minutes before NPC changes location
+    RandomTime = true, -- Randomize the change interval within a range
+    TimeRange = {min = 20, max = 40}, -- Random interval range (minutes)
+}
+
+-- ████████████████████████████████████████████████████████████████████████████████
 -- ████████████████████████ QUEST NPC CONFIGURATION ███████████████████████████████
 -- ████████████████████████████████████████████████████████████████████████████████
 
@@ -552,8 +563,23 @@ Config.QuestNPCs = {
         name = 'Sheriff Curtis Malloy',
         blipName = 'Bounty Quest - Sheriff',
         model = 'S_M_M_ValSheriff_01',
-        coords = vector4(-275.71, 805.01, 118.39, 270.0),
+        coords = vector4(-275.71, 805.01, 118.39, 270.0), -- Default/fallback location
         blipSprite = 'blip_bounty_poster_4',
+        
+        -- Dynamic spawn locations - NPC randomly appears at one of these
+        spawnLocations = {
+            {coords = vector4(-275.71, 805.01, 118.39, 270.0), city = 'Valentine', location = 'Sheriff Office'},
+            {coords = vector4(-278.50, 780.25, 118.44, 180.0), city = 'Valentine', location = 'Main Street'},
+            {coords = vector4(-240.91, 777.56, 117.88, 90.0), city = 'Valentine', location = 'General Store'},
+            {coords = vector4(-324.67, 766.31, 116.88, 45.0), city = 'Valentine', location = 'Hotel'},
+        },
+        
+        -- Time restrictions (24-hour format, nil = available all times)
+        timeRestrictions = {
+            startHour = 6, -- Available from 6:00 AM
+            endHour = 22, -- Available until 10:00 PM
+            daysOfWeek = nil, -- Available all days (nil or {0,1,2,3,4,5,6} where 0=Sunday)
+        },
         
         -- Requirements to unlock this NPC
         requirements = {
@@ -576,8 +602,23 @@ Config.QuestNPCs = {
         name = 'Marshal Thomas Huxley',
         blipName = 'Bounty Quest - Marshal',
         model = 'U_M_M_ValLawman_01',
-        coords = vector4(-1809.19, -354.20, 164.66, 90.0),
+        coords = vector4(-1809.19, -354.20, 164.66, 90.0), -- Default/fallback location
         blipSprite = 'blip_bounty_poster_4',
+        
+        -- Dynamic spawn locations
+        spawnLocations = {
+            {coords = vector4(-1809.19, -354.20, 164.66, 90.0), city = 'Strawberry', location = 'Marshal Office'},
+            {coords = vector4(-1792.13, -386.74, 160.28, 270.0), city = 'Strawberry', location = 'Town Square'},
+            {coords = vector4(-1748.37, -388.51, 156.54, 180.0), city = 'Strawberry', location = 'General Store'},
+            {coords = vector4(-1813.45, -426.84, 158.83, 0.0), city = 'Strawberry', location = 'Welcome Center'},
+        },
+        
+        -- Time restrictions
+        timeRestrictions = {
+            startHour = 7,
+            endHour = 21,
+            daysOfWeek = nil,
+        },
         
         requirements = {
             level = 5,
@@ -596,8 +637,23 @@ Config.QuestNPCs = {
         name = 'Sheriff Gray',
         blipName = 'Bounty Quest - Sheriff',
         model = 'S_M_M_RhdSheriff_01',
-        coords = vector4(1361.22, -1303.01, 77.77, 180.0),
+        coords = vector4(1361.22, -1303.01, 77.77, 180.0), -- Default/fallback location
         blipSprite = 'blip_bounty_poster_4',
+        
+        -- Dynamic spawn locations
+        spawnLocations = {
+            {coords = vector4(1361.22, -1303.01, 77.77, 180.0), city = 'Rhodes', location = 'Sheriff Office'},
+            {coords = vector4(1428.14, -1315.92, 77.52, 270.0), city = 'Rhodes', location = 'Main Street'},
+            {coords = vector4(1329.11, -1293.87, 77.04, 90.0), city = 'Rhodes', location = 'General Store'},
+            {coords = vector4(1368.55, -1314.12, 76.98, 0.0), city = 'Rhodes', location = 'Town Entrance'},
+        },
+        
+        -- Time restrictions
+        timeRestrictions = {
+            startHour = 6,
+            endHour = 23,
+            daysOfWeek = nil,
+        },
         
         requirements = {
             level = 10,
@@ -616,8 +672,23 @@ Config.QuestNPCs = {
         name = 'Chief Inspector Archibald',
         blipName = 'Bounty Quest - Police',
         model = 'S_M_M_SDPolice_01',
-        coords = vector4(2513.14, -1309.84, 48.96, 0.0),
+        coords = vector4(2513.14, -1309.84, 48.96, 0.0), -- Default/fallback location
         blipSprite = 'blip_bounty_poster_4',
+        
+        -- Dynamic spawn locations
+        spawnLocations = {
+            {coords = vector4(2513.14, -1309.84, 48.96, 0.0), city = 'Saint Denis', location = 'Police Department'},
+            {coords = vector4(2632.76, -1312.56, 51.39, 180.0), city = 'Saint Denis', location = 'City Hall'},
+            {coords = vector4(2724.18, -1227.49, 49.38, 270.0), city = 'Saint Denis', location = 'Market District'},
+            {coords = vector4(2524.68, -1451.83, 46.31, 90.0), city = 'Saint Denis', location = 'Harbor District'},
+        },
+        
+        -- Time restrictions (police work all day)
+        timeRestrictions = {
+            startHour = 0,
+            endHour = 24,
+            daysOfWeek = nil,
+        },
         
         requirements = {
             level = 15,
@@ -636,8 +707,23 @@ Config.QuestNPCs = {
         name = 'Marshal Davis',
         blipName = 'Bounty Quest - Marshal',
         model = 'S_M_M_BwmMarshall_01',
-        coords = vector4(-762.61, -1269.22, 43.63, 270.0),
+        coords = vector4(-762.61, -1269.22, 43.63, 270.0), -- Default/fallback location
         blipSprite = 'blip_bounty_poster_4',
+        
+        -- Dynamic spawn locations
+        spawnLocations = {
+            {coords = vector4(-762.61, -1269.22, 43.63, 270.0), city = 'Blackwater', location = 'Marshal Office'},
+            {coords = vector4(-813.38, -1324.01, 43.63, 90.0), city = 'Blackwater', location = 'Town Center'},
+            {coords = vector4(-785.92, -1321.68, 43.88, 180.0), city = 'Blackwater', location = 'General Store'},
+            {coords = vector4(-811.65, -1242.87, 43.63, 0.0), city = 'Blackwater', location = 'Bank Plaza'},
+        },
+        
+        -- Time restrictions
+        timeRestrictions = {
+            startHour = 8,
+            endHour = 20,
+            daysOfWeek = nil,
+        },
         
         requirements = {
             level = 20,
@@ -656,8 +742,23 @@ Config.QuestNPCs = {
         name = 'Bounty Hunter Morgan',
         blipName = 'Bounty Quest - Hunter',
         model = 'A_M_M_RanchersGangSec_01',
-        coords = vector4(-5519.55, -2906.48, -2.18, 180.0),
+        coords = vector4(-5519.55, -2906.48, -2.18, 180.0), -- Default/fallback location
         blipSprite = 'blip_bounty_poster_4',
+        
+        -- Dynamic spawn locations
+        spawnLocations = {
+            {coords = vector4(-5519.55, -2906.48, -2.18, 180.0), city = 'Tumbleweed', location = 'Sheriff Office'},
+            {coords = vector4(-5512.88, -2934.60, -1.36, 270.0), city = 'Tumbleweed', location = 'Main Street'},
+            {coords = vector4(-5486.33, -2938.19, -1.40, 90.0), city = 'Tumbleweed', location = 'General Store'},
+            {coords = vector4(-5502.71, -2950.29, -2.18, 0.0), city = 'Tumbleweed', location = 'Saloon'},
+        },
+        
+        -- Time restrictions (desert hunter works odd hours)
+        timeRestrictions = {
+            startHour = 5,
+            endHour = 23,
+            daysOfWeek = nil,
+        },
         
         requirements = {
             level = 25,
