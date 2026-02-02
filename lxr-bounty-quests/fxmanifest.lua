@@ -1,60 +1,157 @@
 --[[
-    🐺 Land of Wolves - Bounty Quests System
-    © 2026 iBoss21 / The Lux Empire | wolves.land
+    ██╗      █████╗ ███╗   ██╗██████╗      ██████╗ ███████╗    ██╗    ██╗ ██████╗ ██╗    ██╗   ██╗███████╗███████╗
+    ██║     ██╔══██╗████╗  ██║██╔══██╗    ██╔═══██╗██╔════╝    ██║    ██║██╔═══██╗██║    ██║   ██║██╔════╝██╔════╝
+    ██║     ███████║██╔██╗ ██║██║  ██║    ██║   ██║█████╗      ██║ █╗ ██║██║   ██║██║    ██║   ██║█████╗  ███████╗
+    ██║     ██╔══██║██║╚██╗██║██║  ██║    ██║   ██║██╔══╝      ██║███╗██║██║   ██║██║    ╚██╗ ██╔╝██╔══╝  ╚════██║
+    ███████╗██║  ██║██║ ╚████║██████╔╝    ╚██████╔╝██║         ╚███╔███╔╝╚██████╔╝███████╗╚████╔╝ ███████╗███████║
+    ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝      ╚═════╝ ╚═╝          ╚══╝╚══╝  ╚═════╝ ╚══════╝ ╚═══╝  ╚══════╝╚══════╝
+                                                                                                                     
+    🐺 LXR Bounty Quests System - FX Manifest
+    
+    Hunt down dangerous targets, complete quests, and earn legendary rewards in the
+    most comprehensive bounty hunting system for RedM. Featuring multi-framework support,
+    RPG progression, dynamic NPCs, and performance-optimized gameplay.
+    
+    ═══════════════════════════════════════════════════════════════════════════════
+    SERVER INFORMATION
+    ═══════════════════════════════════════════════════════════════════════════════
+    
+    Server:      The Land of Wolves 🐺
+    Tagline:     Georgian RP 🇬🇪 | მგლების მიწა - რჩეულთა ადგილი!
+    Description: ისტორია ცოცხლდება აქ! (History Lives Here!)
+    Type:        Serious Hardcore Roleplay
+    Access:      Discord & Whitelisted
+    
+    Developer:   iBoss21 / The Lux Empire
+    Website:     https://www.wolves.land
+    Discord:     https://discord.gg/CrKcWdfd3A
+    GitHub:      https://github.com/iBoss21
+    Store:       https://theluxempire.tebex.io
+    Server:      https://servers.redm.net/servers/detail/8gj7eb
+    
+    ═══════════════════════════════════════════════════════════════════════════════
+    
+    Version: 2.0.0
+    Performance Target: <0.01ms on idle, <0.05ms during active quests
+    
+    Framework Support: LXR-Core, RSG-Core, VORP, RedEM:RP, QBR, QR, Standalone
+    
+    © 2026 iBoss21 / The Lux Empire | wolves.land | All Rights Reserved
 ]]
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- FX MANIFEST CONFIGURATION
+-- ═══════════════════════════════════════════════════════════════════════════════
 
 fx_version 'cerulean'
 game 'rdr3'
-rdr3_warning 'I acknowledge that this is a prerelease build of RedM, and I am aware my resources *will* become incompatible once RedM ships.'
 
+-- RedM Prerelease Warning (REQUIRED)
+rdr3_warning 'I acknowledge that this is a prerelease build of RedM, and I am aware my resources WILL become incompatible once RedM ships.'
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- RESOURCE METADATA
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+name 'LXR Bounty Quests'
 author 'iBoss21 / The Lux Empire'
-description '🐺 Land of Wolves - Bounty Quests System 2.0 - Hunt down dangerous targets, complete quests, and earn legendary rewards'
+description '🐺 Land of Wolves - Bounty Quests System 2.0 - Hunt down dangerous targets, complete quests, and earn legendary rewards with multi-framework support'
 version '2.0.0'
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- LUA VERSION
+-- ═══════════════════════════════════════════════════════════════════════════════
 
 lua54 'yes'
 
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- SHARED SCRIPTS (Loaded on both client and server)
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Scope: Configuration, localization, framework adapter
+
 shared_scripts {
-    'config.lua',
-    'locales/*.lua',
+    'config.lua',              -- Main configuration file
+    'shared/framework.lua',    -- Framework adapter/bridge layer
+    'locales/*.lua',          -- Language files
 }
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- CLIENT SCRIPTS (Player-side execution)
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Scope: NPC spawning, UI rendering, quest tracking, player interactions
 
 client_scripts {
     'client/*.lua',
 }
 
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- SERVER SCRIPTS (Server authority)
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Scope: Validation, rewards, database operations, anti-cheat, quest management
+
 server_scripts {
-    '@oxmysql/lib/MySQL.lua', -- If using oxmysql
+    '@oxmysql/lib/MySQL.lua', -- Database library (if using oxmysql)
     'server/*.lua',
 }
 
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- DEPENDENCIES
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Note: Dependencies are optional as the script supports runtime framework detection
+-- Uncomment the framework you're using for better server.cfg organization
+
 dependencies {
-    -- Framework dependencies (at least one required)
-    -- 'lxr-core', -- Primary
-    -- 'rsg-core', -- Primary
-    -- 'qbr-core', -- QB-Core for RedM
-    -- 'qr-core', -- QR Core
-    -- 'vorp_core', -- VORP
-    -- 'redem_roleplay', -- RedEM:RP
+    -- ═══════════════════════════════════════════════════════════════════════════
+    -- Framework (choose one or let auto-detect handle it)
+    -- ═══════════════════════════════════════════════════════════════════════════
+    -- 'lxr-core',        -- LXR-Core (Primary - The Land of Wolves)
+    -- 'rsg-core',        -- RSG-Core (Primary - Rexshack Gaming)
+    -- 'vorp_core',       -- VORP Core (Legacy Support)
+    -- 'redem_roleplay',  -- RedEM:RP (Optional)
+    -- 'qbr-core',        -- QBR Core - QB for RedM (Optional)
+    -- 'qr-core',         -- QR Core (Optional)
     
-    -- Optional but recommended
-    -- 'oxmysql', -- or 'ghmattimysql' or 'mysql-async'
+    -- ═══════════════════════════════════════════════════════════════════════════
+    -- Database (recommended)
+    -- ═══════════════════════════════════════════════════════════════════════════
+    -- 'oxmysql',         -- Recommended MySQL resource
+    -- 'ghmattimysql',    -- Alternative MySQL resource
+    -- 'mysql-async',     -- Alternative MySQL resource
 }
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- FILES (For UI resources if needed in future)
+-- ═══════════════════════════════════════════════════════════════════════════════
 
 files {}
 
--- Resource Information
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- RESOURCE INFORMATION (Extended Metadata)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
 metadata {
     ['server'] = 'The Land of Wolves 🐺',
-    ['tagline'] = 'Georgian RP 🇬🇪 | მგლების მიწა',
+    ['tagline'] = 'Georgian RP 🇬🇪 | მგლების მიწა - რჩეულთა ადგილი!',
     ['website'] = 'https://www.wolves.land',
     ['discord'] = 'https://discord.gg/CrKcWdfd3A',
     ['github'] = 'https://github.com/iBoss21',
     ['store'] = 'https://theluxempire.tebex.io',
+    ['serverListing'] = 'https://servers.redm.net/servers/detail/8gj7eb',
 }
 
--- Escrow protection (if you plan to sell)
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- ESCROW PROTECTION (For commercial distribution)
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Uncomment to protect files when selling on Tebex/CFX.re
+
 -- escrow_ignore {
 --     'config.lua',
 --     'locales/*.lua',
+--     'shared/*.lua',
 --     'README.md',
+--     'docs/*.md',
 -- }
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- END OF MANIFEST
+-- ═══════════════════════════════════════════════════════════════════════════════
