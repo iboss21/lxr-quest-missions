@@ -32,7 +32,12 @@ local FrameworkType = Config.Framework
 function InitializeFramework()
     -- Framework is already initialized in shared/framework.lua
     -- Just sync the FrameworkType for compatibility
-    FrameworkType = Framework.Type
+    if Framework and Framework.Type then
+        FrameworkType = Framework.Type
+    else
+        -- Fallback to config setting if Framework not ready yet
+        FrameworkType = Config.Framework or 'standalone'
+    end
     
     if Config.EnableDebug then
         print(('[🐺 Bounty Quests] Using Framework: %s'):format(FrameworkType))
