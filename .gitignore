@@ -1,0 +1,80 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🐺 Land of Wolves - Quest Missions Repository
+# .gitignore - Files to exclude from version control
+# © 2026 iBoss21 / The Lux Empire | wolves.land
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.cache
+/tmp/
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.sublime-*
+.DS_Store
+Thumbs.db
+
+# System files
+*.swp
+*~
+.project
+.settings/
+
+# Build and dependency directories (if any)
+node_modules/
+dist/
+build/
+
+# Config backups
+*.backup
+*.bak
+config.lua.bak
+
+# Database dumps (for security)
+*.sql.backup
+dump.sql
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# Development and testing
+test.lua
+debug.lua
+scratch/
+testing/
+
+# Personal notes (don't commit personal notes)
+notes.txt
+TODO.txt
+personal/
+
+# FiveM/RedM cache
+cache/
+citizen/
+server/cache/
+
+# Logs
+logs/
+*.log
+error.log
+server.log
+
+# Environment files
+.env
+.env.local
+
+# Archives
+*.zip
+*.rar
+*.7z
+*.tar.gz
