@@ -17,6 +17,9 @@ local AnimalGuards = {}
 local QuestBlip = nil
 local TargetBlip = nil
 local NPCPrompts = {}
+local NPCEntities = {} -- Store spawned NPC entities
+local NPCBlips = {} -- Store NPC blips
+local NPCCurrentLocations = {} -- Synced from server
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- FRAMEWORK DETECTION & INITIALIZATION
@@ -125,10 +128,32 @@ function CreateQuestNPCBlips()
     if not Config.EnableBlips then return end
     
     for _, npc in ipairs(Config.QuestNPCs) do
-        local blip = Citizen.InvokeNative(0x554D9D53F696D002, 1664425300, npc.coords.x, npc.coords.y, npc.coords.z)
-        SetBlipSprite(blip, GetHashKey(npc.blipSprite or 'blip_bounty_poster_4'), 1)
-        Citizen.InvokeNative(0x9CB1A1623062F402, blip, npc.blipName or 'Bounty Quest')
+        UpdateNPCBlip(npc)
     end
+end
+
+function UpdateNPCBlip(npc)
+    if not Config.EnableBlips then return end
+    
+    -- Remove existing blip if any
+    if NPCBlips[npc.id] then
+        RemoveBlip(NPCBlips[npc.id])
+        NPCBlips[npc.id] = nil
+    end
+    
+    -- Get current location from synced data or fallback to config
+    local coords = npc.coords
+    if NPCCurrentLocations[npc.id] and NPCCurrentLocations[npc.id].isAvailable then
+        coords = NPCCurrentLocations[npc.id].coords
+    elseif NPCCurrentLocations[npc.id] and not NPCCurrentLocations[npc.id].isAvailable then
+        -- NPC is not available, don't create blip
+        return
+    end
+    
+    local blip = Citizen.InvokeNative(0x554D9D53F696D002, 1664425300, coords.x, coords.y, coords.z)
+    SetBlipSprite(blip, GetHashKey(npc.blipSprite or 'blip_bounty_poster_4'), 1)
+    Citizen.InvokeNative(0x9CB1A1623062F402, blip, npc.blipName or 'Bounty Quest')
+    NPCBlips[npc.id] = blip
 end
 
 function CreateQuestBlip(coords, name)
@@ -168,24 +193,65 @@ end
 
 function SpawnQuestNPCs()
     for _, npc in ipairs(Config.QuestNPCs) do
-        local hash = GetHashKey(npc.model)
-        
-        if not HasModelLoaded(hash) then
-            RequestModel(hash)
-            while not HasModelLoaded(hash) do
-                Wait(100)
-            end
+        SpawnQuestNPC(npc)
+    end
+end
+
+function SpawnQuestNPC(npc)
+    -- Remove existing NPC if any
+    if NPCEntities[npc.id] and DoesEntityExist(NPCEntities[npc.id]) then
+        DeleteEntity(NPCEntities[npc.id])
+        NPCEntities[npc.id] = nil
+    end
+    
+    -- Get current location from synced data or fallback to config
+    local coords = npc.coords
+    if NPCCurrentLocations[npc.id] and NPCCurrentLocations[npc.id].isAvailable then
+        coords = NPCCurrentLocations[npc.id].coords
+    elseif NPCCurrentLocations[npc.id] and not NPCCurrentLocations[npc.id].isAvailable then
+        -- NPC is not available at this time, don't spawn
+        return
+    end
+    
+    local hash = GetHashKey(npc.model)
+    
+    if not HasModelLoaded(hash) then
+        RequestModel(hash)
+        while not HasModelLoaded(hash) do
+            Wait(100)
         end
-        
-        local ped = CreatePed(hash, npc.coords.x, npc.coords.y, npc.coords.z, npc.coords.w, false, false, false, false)
-        Citizen.InvokeNative(0x283978A15512B2FE, ped, true)
-        SetEntityCanBeDamaged(ped, false)
-        SetEntityInvincible(ped, true)
-        SetBlockingOfNonTemporaryEvents(ped, true)
-        FreezeEntityPosition(ped, true)
-        
-        -- Store NPC reference
-        npc.entity = ped
+    end
+    
+    local ped = CreatePed(hash, coords.x, coords.y, coords.z, coords.w, false, false, false, false)
+    Citizen.InvokeNative(0x283978A15512B2FE, ped, true)
+    SetEntityCanBeDamaged(ped, false)
+    SetEntityInvincible(ped, true)
+    SetBlockingOfNonTemporaryEvents(ped, true)
+    FreezeEntityPosition(ped, true)
+    
+    -- Store NPC reference
+    NPCEntities[npc.id] = ped
+    
+    if Config.EnableDebug then
+        print(('[🐺 Bounty Quests] Spawned NPC: %s at %s'):format(npc.name, coords))
+    end
+end
+
+function RemoveQuestNPC(npcId)
+    -- Remove NPC entity
+    if NPCEntities[npcId] and DoesEntityExist(NPCEntities[npcId]) then
+        DeleteEntity(NPCEntities[npcId])
+        NPCEntities[npcId] = nil
+    end
+    
+    -- Remove blip
+    if NPCBlips[npcId] then
+        RemoveBlip(NPCBlips[npcId])
+        NPCBlips[npcId] = nil
+    end
+    
+    if Config.EnableDebug then
+        print(('[🐺 Bounty Quests] Removed NPC: %s'):format(npcId))
     end
 end
 
@@ -283,9 +349,95 @@ AddEventHandler('lxr-bounty:client:showNotification', function(message, type)
     ShowNotification(message, type or 'info')
 end)
 
+RegisterNetEvent('lxr-bounty:client:syncNPCLocations')
+AddEventHandler('lxr-bounty:client:syncNPCLocations', function(locations)
+    NPCCurrentLocations = locations
+    
+    -- Update all NPCs with new locations
+    for _, npc in ipairs(Config.QuestNPCs) do
+        if locations[npc.id] then
+            SpawnQuestNPC(npc)
+            UpdateNPCBlip(npc)
+        end
+    end
+    
+    if Config.EnableDebug then
+        print('[🐺 Bounty Quests] Synced NPC locations from server')
+    end
+end)
+
+RegisterNetEvent('lxr-bounty:client:updateNPCLocation')
+AddEventHandler('lxr-bounty:client:updateNPCLocation', function(npcId, locationData)
+    NPCCurrentLocations[npcId] = locationData
+    
+    -- Find the NPC config
+    for _, npc in ipairs(Config.QuestNPCs) do
+        if npc.id == npcId then
+            -- Respawn NPC at new location
+            SpawnQuestNPC(npc)
+            UpdateNPCBlip(npc)
+            
+            if Config.EnableDebug then
+                print(('[🐺 Bounty Quests] Updated NPC location: %s at %s - %s'):format(npc.name, locationData.city, locationData.location))
+            end
+            
+            -- Notify player if they're near the old location
+            ShowNotification(string.format('%s has moved to %s - %s', npc.name, locationData.city, locationData.location), 'info')
+            break
+        end
+    end
+end)
+
+RegisterNetEvent('lxr-bounty:client:removeNPC')
+AddEventHandler('lxr-bounty:client:removeNPC', function(npcId)
+    RemoveQuestNPC(npcId)
+    
+    -- Find NPC name
+    for _, npc in ipairs(Config.QuestNPCs) do
+        if npc.id == npcId then
+            ShowNotification(string.format('%s is not available at this time', npc.name), 'info')
+            break
+        end
+    end
+end)
+
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- MAIN THREAD - NPC INTERACTION
 -- ═══════════════════════════════════════════════════════════════════════════════
+
+function CheckNPCInteraction(playerPed, playerCoords, npc)
+    -- Get current NPC location
+    local npcCoords = npc.coords
+    if NPCCurrentLocations[npc.id] and NPCCurrentLocations[npc.id].isAvailable then
+        npcCoords = NPCCurrentLocations[npc.id].coords
+    elseif NPCCurrentLocations[npc.id] and not NPCCurrentLocations[npc.id].isAvailable then
+        -- Skip this NPC as it's not available
+        return false
+    end
+    
+    local distance = GetDistance(playerCoords, npcCoords)
+    
+    if distance < 50.0 then
+        if distance < 3.0 then
+            -- Build location info text
+            local locationText = ''
+            if NPCCurrentLocations[npc.id] then
+                locationText = string.format('\n~o~%s - %s~w~', NPCCurrentLocations[npc.id].city, NPCCurrentLocations[npc.id].location)
+            end
+            
+            -- Draw text prompt
+            DrawText3D(npcCoords.x, npcCoords.y, npcCoords.z + 1.0, GetLocale('press_to_interact', npc.name) .. locationText)
+            
+            -- Check for key press
+            if IsControlJustReleased(0, Config.Keys.OpenQuestMenu) then
+                OpenQuestMenu(npc.id)
+            end
+        end
+        return true
+    end
+    
+    return false
+end
 
 Citizen.CreateThread(function()
     while true do
@@ -295,20 +447,8 @@ Citizen.CreateThread(function()
         
         if PlayerLoaded then
             for _, npc in ipairs(Config.QuestNPCs) do
-                local distance = GetDistance(playerCoords, npc.coords)
-                
-                if distance < 50.0 then
+                if CheckNPCInteraction(playerPed, playerCoords, npc) then
                     sleep = 0
-                    
-                    if distance < 3.0 then
-                        -- Draw text prompt
-                        DrawText3D(npc.coords.x, npc.coords.y, npc.coords.z + 1.0, GetLocale('press_to_interact', npc.name))
-                        
-                        -- Check for key press
-                        if IsControlJustReleased(0, Config.Keys.OpenQuestMenu) then
-                            OpenQuestMenu(npc.id)
-                        end
-                    end
                 end
             end
         end
@@ -359,6 +499,12 @@ Citizen.CreateThread(function()
     while not PlayerLoaded do
         Wait(1000)
     end
+    
+    -- Request NPC locations from server
+    TriggerServerEvent('lxr-bounty:server:requestNPCLocations')
+    
+    -- Wait a bit for server response
+    Wait(1000)
     
     -- Create NPC blips
     CreateQuestNPCBlips()

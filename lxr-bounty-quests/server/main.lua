@@ -10,6 +10,7 @@
 
 local ActiveQuests = {} -- [source] = questData
 local PlayerCooldowns = {} -- [identifier] = {global = timestamp, easy = timestamp, etc}
+local NPCCurrentLocations = {} -- [npcId] = {coords, city, location, lastChange}
 local Framework = nil
 local FrameworkType = Config.Framework
 
@@ -48,6 +49,175 @@ function InitializeFramework()
 end
 
 InitializeFramework()
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- NPC DYNAMIC LOCATION SYSTEM
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+function GetCurrentGameTime()
+    -- Get in-game time (hours and minutes)
+    local hours = GetClockHours()
+    local minutes = GetClockMinutes()
+    local dayOfWeek = GetClockDayOfWeek()
+    
+    return {
+        hours = hours,
+        minutes = minutes,
+        dayOfWeek = dayOfWeek
+    }
+end
+
+function IsNPCAvailableAtTime(npc)
+    if not npc.timeRestrictions then
+        return true
+    end
+    
+    local currentTime = GetCurrentGameTime()
+    local restrictions = npc.timeRestrictions
+    
+    -- Check hour restrictions
+    if restrictions.startHour and restrictions.endHour then
+        local currentHour = currentTime.hours
+        
+        -- Handle cases where end time is past midnight
+        if restrictions.endHour < restrictions.startHour then
+            -- e.g., 22:00 to 6:00 (overnight)
+            if not (currentHour >= restrictions.startHour or currentHour < restrictions.endHour) then
+                return false
+            end
+        else
+            -- Normal case e.g., 6:00 to 22:00
+            if currentHour < restrictions.startHour or currentHour >= restrictions.endHour then
+                return false
+            end
+        end
+    end
+    
+    -- Check day of week restrictions
+    if restrictions.daysOfWeek and type(restrictions.daysOfWeek) == 'table' then
+        local dayFound = false
+        for _, day in ipairs(restrictions.daysOfWeek) do
+            if day == currentTime.dayOfWeek then
+                dayFound = true
+                break
+            end
+        end
+        if not dayFound then
+            return false
+        end
+    end
+    
+    return true
+end
+
+function SelectRandomNPCLocation(npc)
+    if not Config.NPCDynamicSpawn.Enabled then
+        return npc.coords
+    end
+    
+    -- Check if NPC is available at current time
+    if not IsNPCAvailableAtTime(npc) then
+        return nil -- NPC is not available at this time
+    end
+    
+    -- If NPC has spawn locations, pick a random one
+    if npc.spawnLocations and #npc.spawnLocations > 0 then
+        local randomIndex = math.random(1, #npc.spawnLocations)
+        local selectedLocation = npc.spawnLocations[randomIndex]
+        
+        if Config.EnableDebug then
+            print(('[🐺 Bounty Quests] %s now at %s - %s'):format(npc.name, selectedLocation.city, selectedLocation.location))
+        end
+        
+        return selectedLocation
+    end
+    
+    -- Fallback to default coords
+    return {
+        coords = npc.coords,
+        city = 'Unknown',
+        location = 'Default Location'
+    }
+end
+
+function InitializeNPCLocations()
+    for _, npc in ipairs(Config.QuestNPCs) do
+        local location = SelectRandomNPCLocation(npc)
+        
+        -- Calculate next change time
+        local changeInterval = Config.NPCDynamicSpawn.ChangeInterval * 60
+        if Config.NPCDynamicSpawn.RandomTime then
+            local minTime = Config.NPCDynamicSpawn.TimeRange.min * 60
+            local maxTime = Config.NPCDynamicSpawn.TimeRange.max * 60
+            changeInterval = math.random(minTime, maxTime)
+        end
+        
+        NPCCurrentLocations[npc.id] = {
+            coords = location and location.coords or npc.coords,
+            city = location and location.city or 'Unknown',
+            location = location and location.location or 'Default',
+            lastChange = os.time(),
+            nextChange = os.time() + changeInterval,
+            isAvailable = location ~= nil
+        }
+    end
+    
+    if Config.EnableDebug then
+        print('[🐺 Bounty Quests] NPC locations initialized')
+    end
+end
+
+function UpdateNPCLocations()
+    for _, npc in ipairs(Config.QuestNPCs) do
+        if NPCCurrentLocations[npc.id] then
+            local currentTime = os.time()
+            
+            -- Check if it's time to change location
+            if currentTime >= NPCCurrentLocations[npc.id].nextChange then
+                local newLocation = SelectRandomNPCLocation(npc)
+                
+                -- Calculate next change time
+                local changeInterval = Config.NPCDynamicSpawn.ChangeInterval * 60
+                if Config.NPCDynamicSpawn.RandomTime then
+                    local minTime = Config.NPCDynamicSpawn.TimeRange.min * 60
+                    local maxTime = Config.NPCDynamicSpawn.TimeRange.max * 60
+                    changeInterval = math.random(minTime, maxTime)
+                end
+                
+                if newLocation then
+                    NPCCurrentLocations[npc.id] = {
+                        coords = newLocation.coords,
+                        city = newLocation.city,
+                        location = newLocation.location,
+                        lastChange = currentTime,
+                        nextChange = currentTime + changeInterval,
+                        isAvailable = true
+                    }
+                    
+                    -- Notify all clients about the location change
+                    TriggerClientEvent('lxr-bounty:client:updateNPCLocation', -1, npc.id, NPCCurrentLocations[npc.id])
+                    
+                    if Config.EnableDebug then
+                        print(('[🐺 Bounty Quests] %s moved to %s - %s'):format(npc.name, newLocation.city, newLocation.location))
+                    end
+                else
+                    -- NPC is not available at this time
+                    NPCCurrentLocations[npc.id].isAvailable = false
+                    NPCCurrentLocations[npc.id].nextChange = currentTime + changeInterval
+                    TriggerClientEvent('lxr-bounty:client:removeNPC', -1, npc.id)
+                    
+                    if Config.EnableDebug then
+                        print(('[🐺 Bounty Quests] %s is not available at this time'):format(npc.name))
+                    end
+                end
+            end
+        end
+    end
+end
+
+function GetNPCCurrentLocation(npcId)
+    return NPCCurrentLocations[npcId]
+end
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- DATABASE FUNCTIONS
@@ -492,6 +662,14 @@ AddEventHandler('lxr-bounty:server:getStats', function()
     TriggerClientEvent('lxr-bounty:client:showNotification', source, stats, 'info')
 end)
 
+RegisterNetEvent('lxr-bounty:server:requestNPCLocations')
+AddEventHandler('lxr-bounty:server:requestNPCLocations', function()
+    local source = source
+    
+    -- Send all current NPC locations to the requesting client
+    TriggerClientEvent('lxr-bounty:client:syncNPCLocations', source, NPCCurrentLocations)
+end)
+
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- PLAYER DISCONNECT - CLEANUP
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -526,10 +704,29 @@ Citizen.CreateThread(function()
         ^5Framework:^0 ]] .. FrameworkType .. [[
         ^5Quest NPCs:^0 ]] .. #Config.QuestNPCs .. [[
         ^5Total Quests:^0 ]] .. #Config.Quests .. [[
+        ^5Dynamic NPCs:^0 ]] .. (Config.NPCDynamicSpawn.Enabled and 'Enabled' or 'Disabled') .. [[
         ^3═══════════════════════════════════════════════════════════════════════════════^0
         ^6🐺 wolves.land - The Land of Wolves^0
         ^3═══════════════════════════════════════════════════════════════════════════════^0
     ]])
+    
+    -- Initialize NPC locations
+    InitializeNPCLocations()
+    
+    -- Start periodic location update if dynamic spawning is enabled
+    if Config.NPCDynamicSpawn.Enabled then
+        Citizen.CreateThread(function()
+            while true do
+                -- Check and update NPC locations every minute
+                Wait(60000)
+                UpdateNPCLocations()
+            end
+        end)
+        
+        if Config.EnableDebug then
+            print('[🐺 Bounty Quests] Dynamic NPC location system started')
+        end
+    end
 end)
 
 -- ═══════════════════════════════════════════════════════════════════════════════
