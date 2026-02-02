@@ -686,7 +686,7 @@ Config.QuestNPCs = {
         -- Time restrictions (police work all day)
         timeRestrictions = {
             startHour = 0,
-            endHour = 24,
+            endHour = 23, -- Available until 11:59 PM
             daysOfWeek = nil,
         },
         

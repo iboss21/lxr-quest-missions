@@ -405,6 +405,40 @@ end)
 -- MAIN THREAD - NPC INTERACTION
 -- ═══════════════════════════════════════════════════════════════════════════════
 
+function CheckNPCInteraction(playerPed, playerCoords, npc)
+    -- Get current NPC location
+    local npcCoords = npc.coords
+    if NPCCurrentLocations[npc.id] and NPCCurrentLocations[npc.id].isAvailable then
+        npcCoords = NPCCurrentLocations[npc.id].coords
+    elseif NPCCurrentLocations[npc.id] and not NPCCurrentLocations[npc.id].isAvailable then
+        -- Skip this NPC as it's not available
+        return false
+    end
+    
+    local distance = GetDistance(playerCoords, npcCoords)
+    
+    if distance < 50.0 then
+        if distance < 3.0 then
+            -- Build location info text
+            local locationText = ''
+            if NPCCurrentLocations[npc.id] then
+                locationText = string.format('\n~o~%s - %s~w~', NPCCurrentLocations[npc.id].city, NPCCurrentLocations[npc.id].location)
+            end
+            
+            -- Draw text prompt
+            DrawText3D(npcCoords.x, npcCoords.y, npcCoords.z + 1.0, GetLocale('press_to_interact', npc.name) .. locationText)
+            
+            -- Check for key press
+            if IsControlJustReleased(0, Config.Keys.OpenQuestMenu) then
+                OpenQuestMenu(npc.id)
+            end
+        end
+        return true
+    end
+    
+    return false
+end
+
 Citizen.CreateThread(function()
     while true do
         local sleep = 1000
@@ -413,38 +447,9 @@ Citizen.CreateThread(function()
         
         if PlayerLoaded then
             for _, npc in ipairs(Config.QuestNPCs) do
-                -- Get current NPC location
-                local npcCoords = npc.coords
-                if NPCCurrentLocations[npc.id] and NPCCurrentLocations[npc.id].isAvailable then
-                    npcCoords = NPCCurrentLocations[npc.id].coords
-                elseif NPCCurrentLocations[npc.id] and not NPCCurrentLocations[npc.id].isAvailable then
-                    -- Skip this NPC as it's not available
-                    goto continue
-                end
-                
-                local distance = GetDistance(playerCoords, npcCoords)
-                
-                if distance < 50.0 then
+                if CheckNPCInteraction(playerPed, playerCoords, npc) then
                     sleep = 0
-                    
-                    if distance < 3.0 then
-                        -- Build location info text
-                        local locationText = ''
-                        if NPCCurrentLocations[npc.id] then
-                            locationText = string.format('\n~o~%s - %s~w~', NPCCurrentLocations[npc.id].city, NPCCurrentLocations[npc.id].location)
-                        end
-                        
-                        -- Draw text prompt
-                        DrawText3D(npcCoords.x, npcCoords.y, npcCoords.z + 1.0, GetLocale('press_to_interact', npc.name) .. locationText)
-                        
-                        -- Check for key press
-                        if IsControlJustReleased(0, Config.Keys.OpenQuestMenu) then
-                            OpenQuestMenu(npc.id)
-                        end
-                    end
                 end
-                
-                ::continue::
             end
         end
         

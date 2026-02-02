@@ -143,11 +143,21 @@ end
 function InitializeNPCLocations()
     for _, npc in ipairs(Config.QuestNPCs) do
         local location = SelectRandomNPCLocation(npc)
+        
+        -- Calculate next change time
+        local changeInterval = Config.NPCDynamicSpawn.ChangeInterval * 60
+        if Config.NPCDynamicSpawn.RandomTime then
+            local minTime = Config.NPCDynamicSpawn.TimeRange.min * 60
+            local maxTime = Config.NPCDynamicSpawn.TimeRange.max * 60
+            changeInterval = math.random(minTime, maxTime)
+        end
+        
         NPCCurrentLocations[npc.id] = {
             coords = location and location.coords or npc.coords,
             city = location and location.city or 'Unknown',
             location = location and location.location or 'Default',
             lastChange = os.time(),
+            nextChange = os.time() + changeInterval,
             isAvailable = location ~= nil
         }
     end
@@ -160,26 +170,27 @@ end
 function UpdateNPCLocations()
     for _, npc in ipairs(Config.QuestNPCs) do
         if NPCCurrentLocations[npc.id] then
-            local timeSinceChange = os.time() - NPCCurrentLocations[npc.id].lastChange
-            local changeInterval = Config.NPCDynamicSpawn.ChangeInterval * 60 -- Convert to seconds
-            
-            -- Add randomness to interval if enabled
-            if Config.NPCDynamicSpawn.RandomTime then
-                local minTime = Config.NPCDynamicSpawn.TimeRange.min * 60
-                local maxTime = Config.NPCDynamicSpawn.TimeRange.max * 60
-                changeInterval = math.random(minTime, maxTime)
-            end
+            local currentTime = os.time()
             
             -- Check if it's time to change location
-            if timeSinceChange >= changeInterval then
+            if currentTime >= NPCCurrentLocations[npc.id].nextChange then
                 local newLocation = SelectRandomNPCLocation(npc)
+                
+                -- Calculate next change time
+                local changeInterval = Config.NPCDynamicSpawn.ChangeInterval * 60
+                if Config.NPCDynamicSpawn.RandomTime then
+                    local minTime = Config.NPCDynamicSpawn.TimeRange.min * 60
+                    local maxTime = Config.NPCDynamicSpawn.TimeRange.max * 60
+                    changeInterval = math.random(minTime, maxTime)
+                end
                 
                 if newLocation then
                     NPCCurrentLocations[npc.id] = {
                         coords = newLocation.coords,
                         city = newLocation.city,
                         location = newLocation.location,
-                        lastChange = os.time(),
+                        lastChange = currentTime,
+                        nextChange = currentTime + changeInterval,
                         isAvailable = true
                     }
                     
@@ -192,6 +203,7 @@ function UpdateNPCLocations()
                 else
                     -- NPC is not available at this time
                     NPCCurrentLocations[npc.id].isAvailable = false
+                    NPCCurrentLocations[npc.id].nextChange = currentTime + changeInterval
                     TriggerClientEvent('lxr-bounty:client:removeNPC', -1, npc.id)
                     
                     if Config.EnableDebug then
