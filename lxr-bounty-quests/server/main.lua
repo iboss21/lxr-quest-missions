@@ -55,15 +55,14 @@ InitializeFramework()
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 function GetCurrentGameTime()
-    -- Get in-game time (hours and minutes)
-    local hours = GetClockHours()
-    local minutes = GetClockMinutes()
-    local dayOfWeek = GetClockDayOfWeek()
+    -- Get real-world time (hours and minutes) for server-side operations
+    -- Note: Server cannot use GetClockHours/GetClockMinutes (client-only natives)
+    local currentTime = os.date("*t")
     
     return {
-        hours = hours,
-        minutes = minutes,
-        dayOfWeek = dayOfWeek
+        hours = currentTime.hour,
+        minutes = currentTime.min,
+        dayOfWeek = currentTime.wday - 1 -- Convert to 0-6 where 0=Sunday (matching GetClockDayOfWeek native)
     }
 end
 

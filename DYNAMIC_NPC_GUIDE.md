@@ -85,7 +85,7 @@ timeRestrictions = {
 ### Server-Side Logic
 - Server maintains the current location of all NPCs
 - Locations are randomly selected from the available spawn points
-- Time checks use in-game clock (GetClockHours)
+- Time checks use real-world server time (os.date)
 - Clients sync locations when they join
 
 ### Client-Side Logic
